@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import RobotConfigManager from "@/components/landing/RobotConfigManager";
 import RecordingModal from "@/components/landing/RecordingModal";
 import DatasetPicker from "@/components/landing/DatasetPicker";
+import MergeDatasetsModal from "@/components/landing/MergeDatasetsModal";
 import JobsSection from "@/components/jobs/JobsSection";
 
 import UsageInstructionsModal from "@/components/landing/UsageInstructionsModal";
@@ -34,7 +35,8 @@ const Landing = () => {
     deleteRobot,
   } = useRobots();
 
-  const { datasets, loading: datasetsLoading } = useDatasets();
+  const { datasets, loading: datasetsLoading, refresh: refreshDatasets } = useDatasets();
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Recording modal state
   const [showRecordingModal, setShowRecordingModal] = useState(false);
@@ -258,6 +260,7 @@ const Landing = () => {
                 onPickExisting={handlePickExisting}
                 onOpenCustom={handleOpenCustom}
                 onCreateNew={handleCreateDataset}
+                onMergeDatasets={() => setShowMergeModal(true)}
               >
                 <Button
                   variant="outline"
@@ -267,7 +270,7 @@ const Landing = () => {
                   <span className="truncate text-gray-300">
                     {datasetsLoading
                       ? "Loading datasets…"
-                      : "Select or create a dataset…"}
+                      : "Select, create or combine datasets…"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -325,6 +328,13 @@ const Landing = () => {
         setCameras={setCameras}
         onStart={handleStartRecording}
         releaseStreamsRef={releaseStreamsRef}
+      />
+
+      <MergeDatasetsModal
+        open={showMergeModal}
+        onOpenChange={setShowMergeModal}
+        datasets={datasets}
+        onMerged={refreshDatasets}
       />
     </div>
   );

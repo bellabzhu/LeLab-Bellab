@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, ExternalLink } from "lucide-react";
+import { Plus, ExternalLink, Combine } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -21,6 +21,7 @@ interface DatasetPickerProps {
   onPickExisting: (item: DatasetItem) => void;
   onCreateNew: (name: string) => void;
   onOpenCustom: (repoId: string) => void;
+  onMergeDatasets: () => void;
   children: React.ReactNode;
 }
 
@@ -33,6 +34,7 @@ const DatasetPicker: React.FC<DatasetPickerProps> = ({
   onPickExisting,
   onCreateNew,
   onOpenCustom,
+  onMergeDatasets,
   children,
 }) => {
   const [open, setOpen] = useState(false);
@@ -84,6 +86,11 @@ const DatasetPicker: React.FC<DatasetPickerProps> = ({
   const handleOpenCustom = () => {
     if (!canOpenCustom) return;
     onOpenCustom(trimmed);
+    reset();
+  };
+
+  const handleMergeDatasets = () => {
+    onMergeDatasets();
     reset();
   };
 
@@ -159,6 +166,14 @@ const DatasetPicker: React.FC<DatasetPickerProps> = ({
               </CommandGroup>
             )}
           </CommandList>
+          <button
+            type="button"
+            onClick={handleMergeDatasets}
+            className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-sm text-white hover:bg-gray-700"
+          >
+            <Combine className="h-4 w-4" />
+            Merge datasets…
+          </button>
           <button
             type="button"
             onClick={handleFooterCreate}
