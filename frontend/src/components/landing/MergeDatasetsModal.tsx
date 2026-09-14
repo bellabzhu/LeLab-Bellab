@@ -155,7 +155,8 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
               {selected.size > 0 && selected.size < 2
                 ? " — pick at least one more"
                 : ""}
-              . All selected datasets must share the same fps and cameras.
+              . All selected datasets must share the same robot type, FPS,
+              and cameras (same names and resolution).
             </p>
           </div>
 

@@ -169,7 +169,7 @@ const DatasetPicker: React.FC<DatasetPickerProps> = ({
           <button
             type="button"
             onClick={handleMergeDatasets}
-            className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-sm text-white hover:bg-gray-700"
+            className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600"
           >
             <Combine className="h-4 w-4" />
             Merge datasets…
@@ -178,7 +178,7 @@ const DatasetPicker: React.FC<DatasetPickerProps> = ({
             type="button"
             onClick={handleFooterCreate}
             disabled={createDisabled}
-            className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-sm text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:bg-transparent"
+            className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-sm text-white bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-500"
           >
             <Plus className="h-4 w-4" />
             {createLabel}

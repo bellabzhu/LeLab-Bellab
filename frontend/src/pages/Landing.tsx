@@ -270,7 +270,7 @@ const Landing = () => {
                   <span className="truncate text-gray-300">
                     {datasetsLoading
                       ? "Loading datasets…"
-                      : "Select, create or combine datasets…"}
+                      : "Select, create or merge datasets…"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
