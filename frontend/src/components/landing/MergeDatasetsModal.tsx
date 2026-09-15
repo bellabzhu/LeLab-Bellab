@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Combine, Loader2 } from "lucide-react";
 import { useApi } from "@/contexts/ApiContext";
 import { useToast } from "@/hooks/use-toast";
+import { useHfAuth } from "@/contexts/HfAuthContext";
 import { DatasetItem } from "@/lib/replayApi";
 
 interface MergeDatasetsModalProps {
@@ -31,6 +32,7 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
 }) => {
   const { baseUrl, fetchWithHeaders } = useApi();
   const { toast } = useToast();
+  const { auth } = useHfAuth();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [outputName, setOutputName] = useState("");
@@ -51,6 +53,11 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
 
   const canMerge = selected.size >= 2 && outputName.trim().length > 0 && !submitting;
 
+  const outputRepoId =
+    auth.status === "authenticated"
+      ? `${auth.username}/${outputName.trim()}`
+      : outputName.trim();
+
   const reset = () => {
     setSelected(new Set());
     setOutputName("");
@@ -70,7 +77,7 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
         method: "POST",
         body: JSON.stringify({
           repo_ids: Array.from(selected),
-          output_repo_id: outputName.trim(),
+          output_repo_id: outputRepoId,
           push_to_hub: pushToHub,
         }),
       });
@@ -79,7 +86,7 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
       if (response.ok && data.success) {
         toast({
           title: "Datasets merged",
-          description: data.message ?? `Merged into ${outputName.trim()}.`,
+          description: data.message ?? `Merged into ${outputRepoId}.`,
         });
         reset();
         onOpenChange(false);
@@ -180,6 +187,19 @@ const MergeDatasetsModal: React.FC<MergeDatasetsModalProps> = ({
               Letters, numbers, <code>.</code> <code>_</code> <code>-</code>{" "}
               only — other characters become <code>_</code>.
             </p>
+            {outputName &&
+              (auth.status === "authenticated" ? (
+                <p className="text-xs text-gray-500">
+                  Will be saved as{" "}
+                  <span className="text-gray-300 font-mono">
+                    {outputRepoId}
+                  </span>
+                </p>
+              ) : auth.status === "unauthenticated" ? (
+                <p className="text-xs text-amber-400/80">
+                  Log in to Hugging Face to set the repository owner.
+                </p>
+              ) : null)}
           </div>
 
           <div className="flex items-start gap-3">
