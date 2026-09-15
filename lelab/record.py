@@ -91,6 +91,12 @@ class DatasetInfoRequest(BaseModel):
     dataset_repo_id: str
 
 
+class MergeDatasetsRequest(BaseModel):
+    repo_ids: list[str]
+    output_repo_id: str
+    push_to_hub: bool = False
+
+
 def _platform_backend():
     """Pin the OpenCV backend per-platform so the index→camera mapping matches
     what the /available-cameras thumbnails were captured with. cv2.CAP_ANY can
@@ -653,6 +659,53 @@ def handle_upload_dataset(request: UploadRequest) -> dict[str, Any]:
                 "docs_url": "https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication",
             }
         return {"success": False, "message": f"Failed to upload dataset: {str(e)}"}
+
+
+def handle_merge_datasets(request: MergeDatasetsRequest) -> dict[str, Any]:
+    """Merge several existing local datasets into a new one.
+
+    Source datasets are only ever read, never modified or deleted — the
+    merged result is written to its own new repo_id, alongside the
+    originals.
+    """
+    if len(request.repo_ids) < 2:
+        return {"success": False, "message": "Select at least two datasets to merge."}
+
+    try:
+        from lerobot.datasets import LeRobotDataset, merge_datasets
+
+        for repo_id in request.repo_ids:
+            repair_local_dataset(repo_id)
+
+        logger.info(f"Loading {len(request.repo_ids)} datasets to merge: {request.repo_ids}")
+        datasets = [LeRobotDataset(repo_id) for repo_id in request.repo_ids]
+
+        logger.info(f"Merging into {request.output_repo_id}")
+        merged = merge_datasets(datasets, output_repo_id=request.output_repo_id)
+
+        if request.push_to_hub:
+            logger.info(f"Pushing merged dataset {request.output_repo_id} to HuggingFace Hub")
+            merged.push_to_hub(tags=with_lelab_tag([]))
+
+        logger.info(
+            f"Merged dataset {request.output_repo_id}: "
+            f"{merged.num_episodes} episodes, {merged.num_frames} frames"
+        )
+        return {
+            "success": True,
+            "message": f"Merged {len(request.repo_ids)} datasets into {request.output_repo_id}",
+            "dataset_repo_id": request.output_repo_id,
+            "num_episodes": merged.num_episodes,
+        }
+
+    except DatasetRepairError as e:
+        logger.error(f"Cannot merge datasets: {e}")
+        return {"success": False, "message": str(e)}
+
+    except Exception as e:
+        logger.error(f"Error merging datasets {request.repo_ids}: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return {"success": False, "message": f"Failed to merge datasets: {str(e)}"}
 
 
 def record_with_web_events(cfg: RecordConfig, web_events: dict) -> LeRobotDataset:

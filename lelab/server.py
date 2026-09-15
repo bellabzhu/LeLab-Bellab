@@ -50,11 +50,13 @@ from .jobs import (
 )
 from .record import (
     DatasetInfoRequest,
+    MergeDatasetsRequest,
     RecordingRequest,
     UploadRequest,
     handle_delete_dataset,
     handle_exit_early,
     handle_get_dataset_info,
+    handle_merge_datasets,
     handle_recording_status,
     handle_rerecord_episode,
     handle_start_recording,
@@ -490,6 +492,12 @@ def get_dataset_info(request: DatasetInfoRequest):
 def delete_dataset(request: DatasetInfoRequest):
     """Remove a recorded dataset directory from local disk."""
     return handle_delete_dataset(request)
+
+
+@app.post("/merge-datasets")
+def merge_datasets_endpoint(request: MergeDatasetsRequest):
+    """Merge several existing local datasets into a new one, keeping the originals."""
+    return handle_merge_datasets(request)
 
 
 # ============================================================================
