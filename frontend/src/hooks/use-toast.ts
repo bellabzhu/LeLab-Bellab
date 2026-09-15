@@ -152,6 +152,9 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
+      // Error toasts often carry a long message the user needs time to
+      // read (e.g. to debug); don't auto-dismiss them like routine toasts.
+      duration: props.variant === "destructive" ? Infinity : undefined,
       ...props,
       id,
       open: true,
