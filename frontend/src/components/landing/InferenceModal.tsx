@@ -426,30 +426,35 @@ const InferenceModal: React.FC<Props> = ({
                           {dims.width}×{dims.height}
                         </p>
                       </div>
-                      <Select
-                        value={value != null ? String(value) : undefined}
-                        onValueChange={(v) => onCameraBindingChange(name, v)}
-                      >
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-44">
-                          <SelectValue placeholder="Select a camera" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                          {availableCameras.length === 0 ? (
-                            <div className="px-2 py-1.5 text-xs text-gray-500">
-                              No cameras detected
-                            </div>
-                          ) : (
-                            availableCameras.map((cam) => (
-                              <SelectItem
-                                key={cam.index}
-                                value={String(cam.index)}
-                              >
-                                #{cam.index} — {cam.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <div className="w-44 shrink-0">
+                        <Label className="text-[10px] text-gray-500">
+                          Camera
+                        </Label>
+                        <Select
+                          value={value != null ? String(value) : undefined}
+                          onValueChange={(v) => onCameraBindingChange(name, v)}
+                        >
+                          <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                            <SelectValue placeholder="Select a camera" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                            {availableCameras.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-gray-500">
+                                No cameras detected
+                              </div>
+                            ) : (
+                              availableCameras.map((cam) => (
+                                <SelectItem
+                                  key={cam.index}
+                                  value={String(cam.index)}
+                                >
+                                  #{cam.index} — {cam.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="w-16 shrink-0">
                         <Label className="text-[10px] text-gray-500">
                           FPS
