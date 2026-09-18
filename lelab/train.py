@@ -41,8 +41,10 @@ class TrainingRequest(BaseModel):
     # Policy configuration
     policy_type: str = "act"
     # Hub repo id or local directory to fine-tune from (e.g. "lerobot/smolvla_base").
-    # Mutually exclusive with policy_type: when set, emits --policy.path instead
-    # of --policy.type, so the checkpoint's own saved config drives policy init.
+    # Sent alongside policy_type as --policy.pretrained_path — it's a plain
+    # field on PreTrainedConfig (lerobot/configs/policies.py), not a separate
+    # loading mode; --policy.type still selects which config subclass draccus
+    # parses the rest of --policy.* against.
     pretrained_path: str | None = None
 
     # Core training parameters
@@ -138,13 +140,10 @@ def build_training_command(
     if request.dataset_image_transforms_enable:
         cmd.extend(["--dataset.image_transforms.enable", "true"])
 
-    # Policy. pretrained_path and policy_type are mutually exclusive: giving
-    # --policy.path loads the checkpoint's own saved config (including its
-    # type), so --policy.type must be omitted rather than sent alongside it.
+    # Policy
+    cmd.extend(["--policy.type", request.policy_type])
     if request.pretrained_path:
-        cmd.extend(["--policy.path", request.pretrained_path])
-    else:
-        cmd.extend(["--policy.type", request.policy_type])
+        cmd.extend(["--policy.pretrained_path", request.pretrained_path])
 
     # Core training params
     cmd.extend(["--steps", str(request.steps)])
