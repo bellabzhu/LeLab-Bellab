@@ -103,6 +103,24 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
           </div>
 
           <div>
+            <Label htmlFor="pretrained_path" className="text-slate-300">
+              Pretrained policy path (fine-tune from)
+            </Label>
+            <Input
+              id="pretrained_path"
+              value={config.pretrained_path ?? ''}
+              onChange={(e) =>
+                updateConfig('pretrained_path', e.target.value || undefined)
+              }
+              placeholder="lerobot/smolvla_base"
+              className="bg-slate-900 border-slate-600 text-white rounded-lg"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Leave empty to train from scratch. Almost always you want to fine-tune.
+            </p>
+          </div>
+
+          <div>
             <Label htmlFor="steps" className="text-slate-300">
               Training Steps
             </Label>

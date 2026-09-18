@@ -28,6 +28,7 @@ export type MetricsHistoryPoint = {
 export interface TrainingRequest {
   dataset_repo_id: string;
   policy_type: string;
+  pretrained_path?: string;
   steps: number;
   batch_size: number;
   seed?: number;
