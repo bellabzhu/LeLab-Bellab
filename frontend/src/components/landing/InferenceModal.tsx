@@ -85,7 +85,9 @@ const InferenceModal: React.FC<Props> = ({
   const [selectedStep, setSelectedStep] = useState<number | null>(initialStep);
   const [task, setTask] = useState("");
   const [durationS, setDurationS] = useState(60);
-  const [cameraFps, setCameraFps] = useState(DEFAULT_FPS);
+  // Per expected camera name → its capture fps, defaulted from the robot's
+  // saved camera config (falling back to DEFAULT_FPS) when the policy loads.
+  const [cameraFpsByName, setCameraFpsByName] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const [policyConfig, setPolicyConfig] = useState<PolicyConfigSummary | null>(null);
@@ -142,6 +144,24 @@ const InferenceModal: React.FC<Props> = ({
           }
           return next;
         });
+        // Same for per-camera fps, defaulted from the robot's saved camera
+        // config (matched by name) so it starts out consistent with how
+        // the camera was actually calibrated, not a fixed guess.
+        const robotCams = robot?.cameras ?? [];
+        setCameraFpsByName((prev) => {
+          const next: Record<string, number> = {};
+          for (const name of Object.keys(cfg.image_features)) {
+            if (prev[name] != null) {
+              next[name] = prev[name];
+              continue;
+            }
+            const robotCam = robotCams.find(
+              (c) => c.name.toLowerCase() === name.toLowerCase(),
+            );
+            next[name] = robotCam?.fps ?? DEFAULT_FPS;
+          }
+          return next;
+        });
       })
       .catch((e) => {
         if (cancelled) return;
@@ -154,7 +174,7 @@ const InferenceModal: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, baseUrl, fetchWithHeaders, jobId, selectedStep]);
+  }, [open, baseUrl, fetchWithHeaders, jobId, selectedStep, robot]);
 
   // If the selected robot has cameras whose names match a policy-expected
   // camera, auto-bind them. Prefer matching by browser device_id (stable
@@ -223,7 +243,7 @@ const InferenceModal: React.FC<Props> = ({
         camera_index: idx,
         width: dims.width,
         height: dims.height,
-        fps: cameraFps,
+        fps: cameraFpsByName[name] ?? DEFAULT_FPS,
       };
     }
     try {
@@ -251,6 +271,10 @@ const InferenceModal: React.FC<Props> = ({
   const onCameraBindingChange = (name: string, value: string) => {
     const idx = Number(value);
     setCameraBindings((prev) => ({ ...prev, [name]: idx }));
+  };
+
+  const onCameraFpsChange = (name: string, value: number) => {
+    setCameraFpsByName((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -357,20 +381,6 @@ const InferenceModal: React.FC<Props> = ({
                 className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="cameraFps" className="text-sm font-medium text-gray-300">
-                Camera FPS
-              </Label>
-              <NumberInput
-                id="cameraFps"
-                min={1}
-                value={cameraFps}
-                onChange={(v) => {
-                  if (v !== undefined) setCameraFps(v);
-                }}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -416,30 +426,49 @@ const InferenceModal: React.FC<Props> = ({
                           {dims.width}×{dims.height}
                         </p>
                       </div>
-                      <Select
-                        value={value != null ? String(value) : undefined}
-                        onValueChange={(v) => onCameraBindingChange(name, v)}
-                      >
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-56">
-                          <SelectValue placeholder="Select a camera" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                          {availableCameras.length === 0 ? (
-                            <div className="px-2 py-1.5 text-xs text-gray-500">
-                              No cameras detected
-                            </div>
-                          ) : (
-                            availableCameras.map((cam) => (
-                              <SelectItem
-                                key={cam.index}
-                                value={String(cam.index)}
-                              >
-                                #{cam.index} — {cam.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <div className="w-44 shrink-0">
+                        <Label className="text-[10px] text-gray-500">
+                          Camera
+                        </Label>
+                        <Select
+                          value={value != null ? String(value) : undefined}
+                          onValueChange={(v) => onCameraBindingChange(name, v)}
+                        >
+                          <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                            <SelectValue placeholder="Select a camera" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                            {availableCameras.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-gray-500">
+                                No cameras detected
+                              </div>
+                            ) : (
+                              availableCameras.map((cam) => (
+                                <SelectItem
+                                  key={cam.index}
+                                  value={String(cam.index)}
+                                >
+                                  #{cam.index} — {cam.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-16 shrink-0">
+                        <Label className="text-[10px] text-gray-500">
+                          FPS
+                        </Label>
+                        <NumberInput
+                          aria-label={`${name} FPS`}
+                          min={1}
+                          value={cameraFpsByName[name] ?? DEFAULT_FPS}
+                          onChange={(v) => {
+                            if (v !== undefined) onCameraFpsChange(name, v);
+                          }}
+                          className="bg-gray-800 border-gray-700 text-white"
+                        />
+                      </div>
                       <CameraThumbnail deviceId={bound?.deviceId ?? ""} paused={submitting} />
                     </div>
                   );
