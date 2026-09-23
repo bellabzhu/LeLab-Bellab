@@ -154,7 +154,7 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
               <div className="flex items-center space-x-2 mt-1 mb-2">
                 <Checkbox
                   id="fine_tune_smolvla_base"
-                  checked={config.pretrained_path === SMOLVLA_BASE_PATH}
+                  checked={!!config.pretrained_path?.trim()}
                   onCheckedChange={(checked) =>
                     updateConfig(
                       'pretrained_path',
@@ -170,7 +170,7 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
                 </Label>
               </div>
 
-              {config.pretrained_path !== SMOLVLA_BASE_PATH && (
+              {config.pretrained_path?.trim() ? (
                 <>
                   <Input
                     id="pretrained_path"
@@ -182,9 +182,15 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
                     className="bg-slate-900 border-slate-600 text-white rounded-lg"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    Leave empty to train from scratch. Almost always you want to fine-tune.
+                    Defaults to the public base. Change it to fine-tune from a
+                    different checkpoint instead, e.g. one of your own
+                    previous runs.
                   </p>
                 </>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1">
+                  Training from scratch (no pretrained weights).
+                </p>
               )}
 
               {config.pretrained_path?.trim() && (
