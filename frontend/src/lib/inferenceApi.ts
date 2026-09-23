@@ -13,6 +13,7 @@ export interface StartInferenceRequest {
     fps?: number;
   }>;
   duration_s: number;
+  n_action_steps: number;
 }
 
 export interface InferenceStatus {

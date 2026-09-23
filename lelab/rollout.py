@@ -49,6 +49,11 @@ class InferenceRequest(BaseModel):
     task: str = ""
     cameras: dict[str, dict[str, Any]] = {}
     duration_s: int = 60
+    # How many actions from a single policy inference call get executed
+    # before the policy is called again (the "action chunk" size). Lower =
+    # more reactive but more inference calls; higher = longer open-loop
+    # stretches per call. Matches SmolVLA's own default of 50.
+    n_action_steps: int = 50
 
 
 inference_active: bool = False
@@ -344,6 +349,7 @@ def handle_start_inference(request: InferenceRequest) -> dict[str, Any]:
             f"--robot.id={follower_id}",
             f"--task={request.task}",
             f"--duration={request.duration_s}",
+            f"--policy.n_action_steps={request.n_action_steps}",
             *_rollout_inference_args(policy_path),
         ]
         if request.cameras:
