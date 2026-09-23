@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -16,16 +18,57 @@ import DatasetCombobox from '@/components/replay/DatasetCombobox';
 import { DatasetItem } from '@/lib/replayApi';
 import WandbInstallDialog from '../WandbInstallDialog';
 import { useApi } from '@/contexts/ApiContext';
+import { checkPretrainedPath, PretrainedSourceCheck } from '@/lib/jobsApi';
 
 interface EssentialsCardProps extends ConfigComponentProps {
   datasets: DatasetItem[];
   datasetsLoading: boolean;
 }
 
+const SMOLVLA_BASE_PATH = 'lerobot/smolvla_base';
+
 const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, datasets, datasetsLoading }) => {
   const { baseUrl, fetchWithHeaders } = useApi();
   const [wandbDialogOpen, setWandbDialogOpen] = useState(false);
   const [wandbInstallHint, setWandbInstallHint] = useState('pip install wandb');
+  const [pretrainedCheck, setPretrainedCheck] = useState<PretrainedSourceCheck | null>(null);
+  const [pretrainedChecking, setPretrainedChecking] = useState(false);
+
+  // Debounced: verify the "fine-tune from" path/repo resolves to a real
+  // pretrained model before the user commits to a training run on it.
+  useEffect(() => {
+    const source = config.pretrained_path?.trim();
+    if (!source) {
+      setPretrainedCheck(null);
+      setPretrainedChecking(false);
+      return;
+    }
+    setPretrainedChecking(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      checkPretrainedPath(baseUrl, fetchWithHeaders, source, controller.signal)
+        .then(setPretrainedCheck)
+        .catch(() => {
+          // Aborted (superseded by a newer keystroke) or backend
+          // unreachable — don't show a false negative for either.
+        })
+        .finally(() => setPretrainedChecking(false));
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [config.pretrained_path, baseUrl, fetchWithHeaders]);
+
+  // Only SmolVLA has a GUI-supported base checkpoint. If pretrained_path is
+  // left over from switching away from SmolVLA (or from the initial
+  // default), clear it so other policies don't silently send
+  // --policy.pretrained_path lerobot/smolvla_base.
+  useEffect(() => {
+    if (config.policy_type !== 'smolvla' && config.pretrained_path) {
+      updateConfig('pretrained_path', undefined);
+    }
+  }, [config.policy_type, config.pretrained_path, updateConfig]);
 
   const handleWandbToggle = async (checked: boolean) => {
     if (!checked) {
@@ -101,6 +144,79 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
               </SelectContent>
             </Select>
           </div>
+
+          {config.policy_type === 'smolvla' && (
+            <div>
+              <Label htmlFor="pretrained_path" className="text-slate-300">
+                Pretrained policy path (fine-tune from)
+              </Label>
+
+              <div className="flex items-center space-x-2 mt-1 mb-2">
+                <Checkbox
+                  id="fine_tune_smolvla_base"
+                  checked={!!config.pretrained_path?.trim()}
+                  onCheckedChange={(checked) =>
+                    updateConfig(
+                      'pretrained_path',
+                      checked ? SMOLVLA_BASE_PATH : undefined,
+                    )
+                  }
+                />
+                <Label
+                  htmlFor="fine_tune_smolvla_base"
+                  className="text-slate-300 font-normal cursor-pointer"
+                >
+                  Fine-tune from pretrained SmolVLA base
+                </Label>
+              </div>
+
+              {config.pretrained_path?.trim() ? (
+                <>
+                  <Input
+                    id="pretrained_path"
+                    value={config.pretrained_path ?? ''}
+                    onChange={(e) =>
+                      updateConfig('pretrained_path', e.target.value || undefined)
+                    }
+                    placeholder="lerobot/smolvla_base"
+                    className="bg-slate-900 border-slate-600 text-white rounded-lg"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Defaults to the public base. Change it to fine-tune from a
+                    different checkpoint instead, e.g. one of your own
+                    previous runs.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1">
+                  Training from scratch (no pretrained weights).
+                </p>
+              )}
+
+              {config.pretrained_path?.trim() && (
+                <p className="text-xs mt-1 flex items-center gap-1.5">
+                  {pretrainedChecking ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                      <span className="text-slate-500">Checking…</span>
+                    </>
+                  ) : pretrainedCheck?.valid ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      <span className="text-green-500">
+                        Found{pretrainedCheck.policy_type ? ` (${pretrainedCheck.policy_type})` : ''}
+                      </span>
+                    </>
+                  ) : pretrainedCheck && !pretrainedCheck.valid ? (
+                    <>
+                      <XCircle className="w-3 h-3 text-red-500" />
+                      <span className="text-red-500">{pretrainedCheck.message}</span>
+                    </>
+                  ) : null}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <Label htmlFor="steps" className="text-slate-300">

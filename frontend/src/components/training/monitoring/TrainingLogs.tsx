@@ -33,7 +33,11 @@ const TrainingLogs: React.FC<TrainingLogsProps> = ({ logs, logContainerRef }) =>
             logs.map((log, index) => (
               <div
                 key={index}
-                className="text-slate-300 break-words whitespace-pre-wrap"
+                className={
+                  log.message.startsWith('Training from scratch')
+                    ? 'text-amber-400 font-semibold break-words whitespace-pre-wrap'
+                    : 'text-slate-300 break-words whitespace-pre-wrap'
+                }
               >
                 <span className="text-slate-500 mr-2 select-none">
                   {new Date(log.timestamp * 1000).toLocaleTimeString()}

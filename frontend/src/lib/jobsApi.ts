@@ -28,6 +28,7 @@ export type MetricsHistoryPoint = {
 export interface TrainingRequest {
   dataset_repo_id: string;
   policy_type: string;
+  pretrained_path?: string;
   steps: number;
   batch_size: number;
   seed?: number;
@@ -196,6 +197,26 @@ export async function importModel(
     method: "POST",
     body: name ? { source, name } : { source },
     action: "Import model",
+  });
+}
+
+export interface PretrainedSourceCheck {
+  valid: boolean;
+  message: string;
+  policy_type: string | null;
+}
+
+export async function checkPretrainedPath(
+  baseUrl: string,
+  fetcher: Fetcher,
+  source: string,
+  signal?: AbortSignal,
+): Promise<PretrainedSourceCheck> {
+  return apiRequest<PretrainedSourceCheck>(baseUrl, fetcher, "/check-pretrained-path", {
+    method: "POST",
+    body: { source },
+    signal,
+    action: "Check pretrained path",
   });
 }
 
