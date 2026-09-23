@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -23,6 +24,8 @@ interface EssentialsCardProps extends ConfigComponentProps {
   datasets: DatasetItem[];
   datasetsLoading: boolean;
 }
+
+const SMOLVLA_BASE_PATH = 'lerobot/smolvla_base';
 
 const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, datasets, datasetsLoading }) => {
   const { baseUrl, fetchWithHeaders } = useApi();
@@ -136,18 +139,46 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
             <Label htmlFor="pretrained_path" className="text-slate-300">
               Pretrained policy path (fine-tune from)
             </Label>
-            <Input
-              id="pretrained_path"
-              value={config.pretrained_path ?? ''}
-              onChange={(e) =>
-                updateConfig('pretrained_path', e.target.value || undefined)
-              }
-              placeholder="lerobot/smolvla_base"
-              className="bg-slate-900 border-slate-600 text-white rounded-lg"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Leave empty to train from scratch. Almost always you want to fine-tune.
-            </p>
+
+            {config.policy_type === 'smolvla' && (
+              <div className="flex items-center space-x-2 mt-1 mb-2">
+                <Checkbox
+                  id="fine_tune_smolvla_base"
+                  checked={config.pretrained_path === SMOLVLA_BASE_PATH}
+                  onCheckedChange={(checked) =>
+                    updateConfig(
+                      'pretrained_path',
+                      checked ? SMOLVLA_BASE_PATH : undefined,
+                    )
+                  }
+                />
+                <Label
+                  htmlFor="fine_tune_smolvla_base"
+                  className="text-slate-300 font-normal cursor-pointer"
+                >
+                  Fine-tune from pretrained SmolVLA base
+                </Label>
+              </div>
+            )}
+
+            {(config.policy_type !== 'smolvla' ||
+              config.pretrained_path !== SMOLVLA_BASE_PATH) && (
+              <>
+                <Input
+                  id="pretrained_path"
+                  value={config.pretrained_path ?? ''}
+                  onChange={(e) =>
+                    updateConfig('pretrained_path', e.target.value || undefined)
+                  }
+                  placeholder="lerobot/smolvla_base"
+                  className="bg-slate-900 border-slate-600 text-white rounded-lg"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Leave empty to train from scratch. Almost always you want to fine-tune.
+                </p>
+              </>
+            )}
+
             {config.pretrained_path?.trim() && (
               <p className="text-xs mt-1 flex items-center gap-1.5">
                 {pretrainedChecking ? (
