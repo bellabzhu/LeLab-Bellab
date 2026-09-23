@@ -600,6 +600,36 @@ def _list_imported_hub(api, repo_id: str) -> list[JobCheckpoint]:
     return []
 
 
+def resolve_pretrained_source(source: str) -> dict[str, object]:
+    """Check whether `source` (a local path or HF Hub repo id) resolves to a
+    usable pretrained model — i.e. exposes a config.json, either directly or
+    under a checkpoints/<step>/pretrained_model tree. Read-only: unlike
+    register_imported(), this never registers anything, so the training
+    page's "fine-tune from" field and the Import Model modal can call it as
+    the user types without side effects.
+    """
+    src = source.strip()
+    if not src:
+        return {"valid": False, "message": "Enter a path or repo id.", "policy_type": None}
+
+    local_path = Path(src).expanduser()
+    if local_path.is_dir():
+        ckpts = _list_imported_local(str(local_path.resolve()))
+    else:
+        from .utils.hf_auth import shared_hf_api
+
+        ckpts = _list_imported_hub(shared_hf_api(), src)
+
+    if not ckpts:
+        return {"valid": False, "message": f"No usable model found at {src!r}.", "policy_type": None}
+
+    policy_type = None
+    with contextlib.suppress(Exception):
+        policy_type = _read_checkpoint_config(ckpts[-1]).get("type")
+
+    return {"valid": True, "message": "Found a valid pretrained model.", "policy_type": policy_type}
+
+
 _LANGUAGE_CONDITIONED_POLICY_TYPES = {"smolvla", "pi0", "pi0_fast", "pi05"}
 
 

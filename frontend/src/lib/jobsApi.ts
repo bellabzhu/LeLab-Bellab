@@ -200,6 +200,26 @@ export async function importModel(
   });
 }
 
+export interface PretrainedSourceCheck {
+  valid: boolean;
+  message: string;
+  policy_type: string | null;
+}
+
+export async function checkPretrainedPath(
+  baseUrl: string,
+  fetcher: Fetcher,
+  source: string,
+  signal?: AbortSignal,
+): Promise<PretrainedSourceCheck> {
+  return apiRequest<PretrainedSourceCheck>(baseUrl, fetcher, "/check-pretrained-path", {
+    method: "POST",
+    body: { source },
+    signal,
+    action: "Check pretrained path",
+  });
+}
+
 export async function stopJob(
   baseUrl: string,
   fetcher: Fetcher,

@@ -47,6 +47,7 @@ from .jobs import (
     JobNotRunningError,
     JobTarget,
     job_registry,
+    resolve_pretrained_source,
 )
 from .record import (
     DatasetInfoRequest,
@@ -531,6 +532,19 @@ def import_model(body: ImportModelRequest):
         return job_registry.register_imported(body.source, body.name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class CheckPretrainedPathRequest(BaseModel):
+    source: str
+
+
+@app.post("/check-pretrained-path")
+def check_pretrained_path(body: CheckPretrainedPathRequest):
+    """Check whether a local path or HF Hub repo id resolves to a usable
+    pretrained model, without registering anything. Used by the training
+    page's "fine-tune from" field and the Import Model modal to validate as
+    the user types, before committing to a training run or import."""
+    return resolve_pretrained_source(body.source)
 
 
 @app.get("/jobs")

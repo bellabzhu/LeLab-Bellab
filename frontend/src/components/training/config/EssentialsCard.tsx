@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
@@ -16,6 +17,7 @@ import DatasetCombobox from '@/components/replay/DatasetCombobox';
 import { DatasetItem } from '@/lib/replayApi';
 import WandbInstallDialog from '../WandbInstallDialog';
 import { useApi } from '@/contexts/ApiContext';
+import { checkPretrainedPath, PretrainedSourceCheck } from '@/lib/jobsApi';
 
 interface EssentialsCardProps extends ConfigComponentProps {
   datasets: DatasetItem[];
@@ -26,6 +28,34 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
   const { baseUrl, fetchWithHeaders } = useApi();
   const [wandbDialogOpen, setWandbDialogOpen] = useState(false);
   const [wandbInstallHint, setWandbInstallHint] = useState('pip install wandb');
+  const [pretrainedCheck, setPretrainedCheck] = useState<PretrainedSourceCheck | null>(null);
+  const [pretrainedChecking, setPretrainedChecking] = useState(false);
+
+  // Debounced: verify the "fine-tune from" path/repo resolves to a real
+  // pretrained model before the user commits to a training run on it.
+  useEffect(() => {
+    const source = config.pretrained_path?.trim();
+    if (!source) {
+      setPretrainedCheck(null);
+      setPretrainedChecking(false);
+      return;
+    }
+    setPretrainedChecking(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      checkPretrainedPath(baseUrl, fetchWithHeaders, source, controller.signal)
+        .then(setPretrainedCheck)
+        .catch(() => {
+          // Aborted (superseded by a newer keystroke) or backend
+          // unreachable — don't show a false negative for either.
+        })
+        .finally(() => setPretrainedChecking(false));
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [config.pretrained_path, baseUrl, fetchWithHeaders]);
 
   const handleWandbToggle = async (checked: boolean) => {
     if (!checked) {
@@ -118,6 +148,28 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
             <p className="text-xs text-slate-500 mt-1">
               Leave empty to train from scratch. Almost always you want to fine-tune.
             </p>
+            {config.pretrained_path?.trim() && (
+              <p className="text-xs mt-1 flex items-center gap-1.5">
+                {pretrainedChecking ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                    <span className="text-slate-500">Checking…</span>
+                  </>
+                ) : pretrainedCheck?.valid ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                    <span className="text-green-500">
+                      Found{pretrainedCheck.policy_type ? ` (${pretrainedCheck.policy_type})` : ''}
+                    </span>
+                  </>
+                ) : pretrainedCheck && !pretrainedCheck.valid ? (
+                  <>
+                    <XCircle className="w-3 h-3 text-red-500" />
+                    <span className="text-red-500">{pretrainedCheck.message}</span>
+                  </>
+                ) : null}
+              </p>
+            )}
           </div>
 
           <div>
