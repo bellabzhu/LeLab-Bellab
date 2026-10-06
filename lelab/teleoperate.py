@@ -179,6 +179,17 @@ def handle_start_teleoperation(request: TeleoperateRequest, websocket_manager=No
                 "Make sure it's plugged in and powered on, then try again."
             ) from e
 
+        # Disable torque before touching calibration. write_calibration()
+        # rewrites each motor's Homing_Offset — on these Feetech servos,
+        # Present_Position = Actual_Position - Homing_Offset, so rewriting the
+        # offset while torque is live and a stale Goal_Position is still
+        # cached can make the servo lurch toward a reinterpreted target,
+        # un-commanded. That's a real hazard if a previous session left
+        # torque enabled (e.g. an ungraceful shutdown).
+        logger.info("Disabling torque before writing calibration...")
+        robot.bus.disable_torque()
+        teleop_device.bus.disable_torque()
+
         # Write calibration to motors' memory
         logger.info("Writing calibration to motors...")
         robot.bus.write_calibration(robot.calibration)
