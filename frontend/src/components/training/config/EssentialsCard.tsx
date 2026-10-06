@@ -125,7 +125,16 @@ const EssentialsCard: React.FC<EssentialsCardProps> = ({ config, updateConfig, d
             </Label>
             <Select
               value={config.policy_type}
-              onValueChange={(value) => updateConfig('policy_type', value)}
+              onValueChange={(value) => {
+                updateConfig('policy_type', value);
+                // Choosing SmolVLA starts with "fine-tune from base" ticked
+                // (untick to train from scratch); any other policy has no
+                // pretrained path.
+                updateConfig(
+                  'pretrained_path',
+                  value === 'smolvla' ? SMOLVLA_BASE_PATH : undefined,
+                );
+              }}
             >
               <SelectTrigger id="policy_type" className="bg-slate-900 border-slate-600 text-white rounded-lg">
                 <SelectValue />
