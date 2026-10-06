@@ -6,6 +6,9 @@ export interface TrainingConfig {
 
   // Policy configuration
   policy_type: string;
+  // Hub repo id or local dir to fine-tune from (e.g. "lerobot/smolvla_base").
+  // Empty means train policy_type from scratch.
+  pretrained_path?: string;
 
   // Core training parameters
   steps: number;

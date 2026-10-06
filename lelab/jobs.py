@@ -309,6 +309,20 @@ class SubprocessJobRunner:
     def wandb_run_url(self) -> str | None:
         return self._wandb_run_url
 
+    def _emit_synthetic_line(self, message: str) -> None:
+        """Inject a line into the log stream as if it came from the subprocess —
+        same persist-to-file + in-memory-queue path as a real stdout line, so
+        it survives a reload/reattach and shows up in the log panel like any
+        other line. Used for lelab-authored context (e.g. what policy init
+        mode a run started with) that lerobot itself doesn't print."""
+        log_line = LogLine(timestamp=time.time(), message=message)
+        if self._log_file is not None:
+            try:
+                self._log_file.write(log_line.model_dump_json() + "\n")
+            except Exception as exc:  # pragma: no cover — best-effort persist
+                logger.exception("Error writing to log file: %s", exc)
+        self._log_queue.put(log_line)
+
     # -- internals --
 
     def _on_line(self, line: str) -> None:
@@ -376,6 +390,13 @@ class LocalJobRunner(SubprocessJobRunner):
         cmd = build_training_command(config, output_dir, sys.executable)
         logger.info("Starting job %s: %s", job_id, " ".join(cmd))
         self._spawn(cmd, thread_name=f"job-{job_id}-stdout")
+        # Surface the policy-init mode as the first log line — lerobot's own
+        # printed config buries pretrained_path several screens down, which is
+        # exactly how a from-scratch run goes unnoticed until it's too late.
+        if config.pretrained_path:
+            self._emit_synthetic_line(f"Fine-tuning from: {config.pretrained_path}")
+        else:
+            self._emit_synthetic_line("Training from scratch (no pretrained weights)")
 
 
 class TailingJobRunner:
@@ -577,6 +598,36 @@ def _list_imported_hub(api, repo_id: str) -> list[JobCheckpoint]:
     if "config.json" in files:
         return [JobCheckpoint(step=0, source="hub", ref=f"{repo_id}@root")]
     return []
+
+
+def resolve_pretrained_source(source: str) -> dict[str, object]:
+    """Check whether `source` (a local path or HF Hub repo id) resolves to a
+    usable pretrained model — i.e. exposes a config.json, either directly or
+    under a checkpoints/<step>/pretrained_model tree. Read-only: unlike
+    register_imported(), this never registers anything, so the training
+    page's "fine-tune from" field and the Import Model modal can call it as
+    the user types without side effects.
+    """
+    src = source.strip()
+    if not src:
+        return {"valid": False, "message": "Enter a path or repo id.", "policy_type": None}
+
+    local_path = Path(src).expanduser()
+    if local_path.is_dir():
+        ckpts = _list_imported_local(str(local_path.resolve()))
+    else:
+        from .utils.hf_auth import shared_hf_api
+
+        ckpts = _list_imported_hub(shared_hf_api(), src)
+
+    if not ckpts:
+        return {"valid": False, "message": f"No usable model found at {src!r}.", "policy_type": None}
+
+    policy_type = None
+    with contextlib.suppress(Exception):
+        policy_type = _read_checkpoint_config(ckpts[-1]).get("type")
+
+    return {"valid": True, "message": "Found a valid pretrained model.", "policy_type": policy_type}
 
 
 _LANGUAGE_CONDITIONED_POLICY_TYPES = {"smolvla", "pi0", "pi0_fast", "pi05"}

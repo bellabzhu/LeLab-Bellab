@@ -40,6 +40,12 @@ class TrainingRequest(BaseModel):
 
     # Policy configuration
     policy_type: str = "act"
+    # Hub repo id or local directory to fine-tune from (e.g. "lerobot/smolvla_base").
+    # Sent alongside policy_type as --policy.pretrained_path — it's a plain
+    # field on PreTrainedConfig (lerobot/configs/policies.py), not a separate
+    # loading mode; --policy.type still selects which config subclass draccus
+    # parses the rest of --policy.* against.
+    pretrained_path: str | None = None
 
     # Core training parameters
     steps: int = 10000
@@ -136,6 +142,8 @@ def build_training_command(
 
     # Policy
     cmd.extend(["--policy.type", request.policy_type])
+    if request.pretrained_path:
+        cmd.extend(["--policy.pretrained_path", request.pretrained_path])
 
     # Core training params
     cmd.extend(["--steps", str(request.steps)])
