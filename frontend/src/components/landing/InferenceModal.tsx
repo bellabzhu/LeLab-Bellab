@@ -69,6 +69,7 @@ interface Props {
 }
 
 const DEFAULT_FPS = 30;
+const DEFAULT_N_ACTION_STEPS = 50;
 
 const InferenceModal: React.FC<Props> = ({
   open,
@@ -85,6 +86,7 @@ const InferenceModal: React.FC<Props> = ({
   const [selectedStep, setSelectedStep] = useState<number | null>(initialStep);
   const [task, setTask] = useState("");
   const [durationS, setDurationS] = useState(60);
+  const [nActionSteps, setNActionSteps] = useState(DEFAULT_N_ACTION_STEPS);
   // Per expected camera name → its capture fps, defaulted from the robot's
   // saved camera config (falling back to DEFAULT_FPS) when the policy loads.
   const [cameraFpsByName, setCameraFpsByName] = useState<Record<string, number>>({});
@@ -254,6 +256,7 @@ const InferenceModal: React.FC<Props> = ({
         task,
         cameras: cameraDict,
         duration_s: durationS,
+        n_action_steps: nActionSteps,
       });
       onOpenChange(false);
       navigate("/inference");
@@ -380,6 +383,24 @@ const InferenceModal: React.FC<Props> = ({
                 }}
                 className="bg-gray-800 border-gray-700 text-white"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nActionSteps" className="text-sm font-medium text-gray-300">
+                Number of steps
+              </Label>
+              <NumberInput
+                id="nActionSteps"
+                min={1}
+                value={nActionSteps}
+                onChange={(v) => {
+                  if (v !== undefined) setNActionSteps(v);
+                }}
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+              <p className="text-xs text-gray-500">
+                How many actions the policy executes per inference call
+                before re-planning.
+              </p>
             </div>
           </div>
 
